@@ -1,0 +1,4 @@
+prebuilt/
+*.img
+*.zip
+out/

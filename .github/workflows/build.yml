@@ -76,6 +76,19 @@ jobs:
 
     - name: Maximize build space
       uses: easimon/maximize-build-space@master
+      with:
+        root-reserve-mb: 2048
+        swap-size-mb: 8192
+        remove-dotnet: 'true'
+        remove-android: 'true'
+        remove-haskell: 'true'
+        remove-codeql: 'true'
+        remove-docker-images: 'true'
+
+    - name: Disk check
+      run: |
+        df -h
+        free -h
 
     - name: Setup ccache
       uses: hendrikmuhs/ccache-action@v1.2
@@ -90,14 +103,6 @@ jobs:
         sudo sed -i 's/^#PRIORITY=100/PRIORITY=1000/' /etc/default/zramswap
         sudo systemctl restart zramswap
         zramctl
-
-    - name: Setup swapfile
-      run: |
-        sudo fallocate -l 8G /swapfile || sudo dd if=/dev/zero of=/swapfile bs=1M count=8192
-        sudo chmod 600 /swapfile
-        sudo mkswap /swapfile
-        sudo swapon /swapfile
-        free -h
 
     - name: Setup environment
       run: |

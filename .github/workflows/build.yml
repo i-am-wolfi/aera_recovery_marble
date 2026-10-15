@@ -1,0 +1,135 @@
+name: AERA marble Builder
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      TWRP_MANIFEST_URL:
+        description: "TWRP manifest url"
+        required: true
+        default: "https://github.com/TWRP-Test/platform_manifest_twrp_aosp"
+      TWRP_MANIFEST_BRANCH:
+        description: "TWRP branch"
+        required: true
+        default: "twrp-16.0"
+      DEVICE_TREE_URL:
+        description: "Device tree url"
+        required: true
+        default: "https://github.com/i-am-wolfi/aera_recovery_marble"
+      DEVICE_TREE_BRANCH:
+        description: "Device tree branch"
+        required: true
+        default: "main"
+      DEVICE_PATH:
+        description: "Device path device/"
+        required: true
+        default: "xiaomi/marble"
+      DEVICE_NAME:
+        description: "Device name"
+        required: true
+        default: "marble"
+      LUNCH_TARGET:
+        description: "lunch twrp_ (default same as device name)"
+        required: false
+        default: "marble-eng"
+      BUILD_PARTITION:
+        description: "Build partition"
+        required: true
+        default: "recovery"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+    - name: Show build info
+      run: |
+        if [ "${{ github.event_name }}" = "push" ]; then
+          echo "TWRP_MANIFEST_URL=https://github.com/TWRP-Test/platform_manifest_twrp_aosp" >> "$GITHUB_ENV"
+          echo "TWRP_MANIFEST_BRANCH=twrp-16.0" >> "$GITHUB_ENV"
+          echo "DEVICE_TREE_URL=https://github.com/i-am-wolfi/aera_recovery_marble" >> "$GITHUB_ENV"
+          echo "DEVICE_TREE_BRANCH=main" >> "$GITHUB_ENV"
+          echo "DEVICE_PATH=xiaomi/marble" >> "$GITHUB_ENV"
+          echo "DEVICE_NAME=marble" >> "$GITHUB_ENV"
+          echo "LUNCH_TARGET=marble-eng" >> "$GITHUB_ENV"
+          echo "BUILD_PARTITION=recovery" >> "$GITHUB_ENV"
+        else
+          echo "TWRP_MANIFEST_URL=${{ github.event.inputs.TWRP_MANIFEST_URL }}" >> "$GITHUB_ENV"
+          echo "TWRP_MANIFEST_BRANCH=${{ github.event.inputs.TWRP_MANIFEST_BRANCH }}" >> "$GITHUB_ENV"
+          echo "DEVICE_TREE_URL=${{ github.event.inputs.DEVICE_TREE_URL }}" >> "$GITHUB_ENV"
+          echo "DEVICE_TREE_BRANCH=${{ github.event.inputs.DEVICE_TREE_BRANCH }}" >> "$GITHUB_ENV"
+          echo "DEVICE_PATH=${{ github.event.inputs.DEVICE_PATH }}" >> "$GITHUB_ENV"
+          echo "DEVICE_NAME=${{ github.event.inputs.DEVICE_NAME }}" >> "$GITHUB_ENV"
+          if [ -n "${{ github.event.inputs.LUNCH_TARGET }}" ]; then
+            echo "LUNCH_TARGET=${{ github.event.inputs.LUNCH_TARGET }}" >> "$GITHUB_ENV"
+          else
+            echo "LUNCH_TARGET=${{ github.event.inputs.DEVICE_NAME }}-eng" >> "$GITHUB_ENV"
+          fi
+          echo "BUILD_PARTITION=${{ github.event.inputs.BUILD_PARTITION }}" >> "$GITHUB_ENV"
+        fi
+        echo "BUILD_DATE=$(date +%F)" >> "$GITHUB_ENV"
+
+    - name: Cleanup
+      uses: rokibhasansagar/slimhub_actions@main
+
+    - name: Maximize build space
+      uses: easimon/maximize-build-space@master
+
+    - name: Setup ccache
+      uses: hendrikmuhs/ccache-action@v1.2
+      with:
+        create-symlink: true
+
+    - name: Setup environment
+      run: |
+        export DEBIAN_FRONTEND=noninteractive
+        sudo apt update && sudo apt install repo -y
+        git config --global user.name ${{ github.actor }}
+        git config --global user.email ${{ github.actor }}@users.noreply.github.com
+
+    - name: Sync source
+      run: |
+        repo init -u "$TWRP_MANIFEST_URL" -b "$TWRP_MANIFEST_BRANCH" --depth=1
+        (while true; do echo "Syncing source..."; sleep 60; done) &
+        TIP_PID=$!
+        repo sync -c --force-sync --no-clone-bundle --no-tags -j$(nproc)
+        kill $TIP_PID && exit 0
+
+    - name: Setup device
+      run: |
+        git clone "$DEVICE_TREE_URL" -b "$DEVICE_TREE_BRANCH" "device/$DEVICE_PATH"
+        mkdir -p "device/$DEVICE_PATH/prebuilt"
+        echo "Downloading prebuilt kernel-melt from Ctapchuk base..."
+        curl -L -o "device/$DEVICE_PATH/prebuilt/kernel" \
+          https://raw.githubusercontent.com/Ctapchuk/android_device_xiaomi_marble-OFRP/fox_16.0/prebuilt/kernel-melt
+        ls -lh "device/$DEVICE_PATH/prebuilt/"
+
+    - name: Build recovery
+      run: |
+        source build/envsetup.sh
+        export ALLOW_MISSING_DEPENDENCIES=true
+        export CCACHE_DIR=.ccache
+        export CCACHE_EXEC=$(command -v ccache)
+        export CCACHE_MAXSIZE=5G
+        export USE_CCACHE=1
+        lunch twrp_${{ env.LUNCH_TARGET }}
+        (while true; do echo `date +%T` "Building recovery..."; free -h; sleep 60; done) &
+        TIP_PID=$!
+        m ${{ env.BUILD_PARTITION }}image
+        mv out/target/product/${{ env.DEVICE_NAME }}/${{ env.BUILD_PARTITION }}.img out/target/product/${{ env.DEVICE_NAME }}/AERA-marble-${{ env.BUILD_DATE }}.img
+        kill $TIP_PID && exit 0
+
+    - name: Upload to Release
+      uses: softprops/action-gh-release@v2
+      with:
+        files: out/target/product/${{ env.DEVICE_NAME }}/AERA-marble-${{ env.BUILD_DATE }}.img
+        name: AERA-marble-${{ env.BUILD_DATE }}-${{ github.run_id }}
+        tag_name: ${{ env.BUILD_DATE }}-${{ github.run_id }}
+        body: |
+          AERA bring-up build for marble (POCO F5 / Redmi Note 12 Turbo).
+          Base: Ctapchuk OFRP + Ardjlon touch modules (hos1/miui14 + beforemodules.sh).
+          Test: `fastboot flash recovery_ab AERA-marble-*.img`
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

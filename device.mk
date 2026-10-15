@@ -54,3 +54,7 @@ PRODUCT_PACKAGES += \
     qcom_decrypt_fbe
 
 PRODUCT_EXTRA_RECOVERY_KEYS += $(DEVICE_PATH)/security/otacert
+
+# AERA product flags (harmless plain variables under TWRP manifest;
+# mapped by the AERA build layer when building under the AERA manifest).
+$(call inherit-product, $(DEVICE_PATH)/aera_marble.mk)

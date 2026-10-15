@@ -130,9 +130,9 @@ jobs:
         export CCACHE_MAXSIZE=5G
         export USE_CCACHE=1
         lunch ${{ env.LUNCH_TARGET }}
-        (while true; do echo `date +%T` "Building recovery..."; free -h; sleep 60; done) &
+        (while true; do echo `date +%T` "Building recovery..."; free -h; df -h / | tail -n 1; sleep 60; done) &
         TIP_PID=$!
-        m ${{ env.BUILD_PARTITION }}image
+        m -j3 ${{ env.BUILD_PARTITION }}image
         mv out/target/product/${{ env.DEVICE_NAME }}/${{ env.BUILD_PARTITION }}.img out/target/product/${{ env.DEVICE_NAME }}/AERA-marble-${{ env.BUILD_DATE }}.img
         kill $TIP_PID && exit 0
 

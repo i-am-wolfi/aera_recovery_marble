@@ -1,2 +1,1 @@
-add_lunch_combo twrp_marble-eng
-add_lunch_combo aera_marble-eng
+# Lunch combos are declared via COMMON_LUNCH_CHOICES in AndroidProducts.mk.

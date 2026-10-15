@@ -30,9 +30,9 @@ on:
         required: true
         default: "marble"
       LUNCH_TARGET:
-        description: "lunch twrp_ (default same as device name)"
+        description: "full lunch combo"
         required: false
-        default: "marble-eng"
+        default: "twrp_marble-bp2a-eng"
       BUILD_PARTITION:
         description: "Build partition"
         required: true
@@ -53,7 +53,7 @@ jobs:
           echo "DEVICE_TREE_BRANCH=main" >> "$GITHUB_ENV"
           echo "DEVICE_PATH=xiaomi/marble" >> "$GITHUB_ENV"
           echo "DEVICE_NAME=marble" >> "$GITHUB_ENV"
-          echo "LUNCH_TARGET=marble-eng" >> "$GITHUB_ENV"
+          echo "LUNCH_TARGET=twrp_marble-bp2a-eng" >> "$GITHUB_ENV"
           echo "BUILD_PARTITION=recovery" >> "$GITHUB_ENV"
         else
           echo "TWRP_MANIFEST_URL=${{ github.event.inputs.TWRP_MANIFEST_URL }}" >> "$GITHUB_ENV"
@@ -65,7 +65,7 @@ jobs:
           if [ -n "${{ github.event.inputs.LUNCH_TARGET }}" ]; then
             echo "LUNCH_TARGET=${{ github.event.inputs.LUNCH_TARGET }}" >> "$GITHUB_ENV"
           else
-            echo "LUNCH_TARGET=${{ github.event.inputs.DEVICE_NAME }}-eng" >> "$GITHUB_ENV"
+            echo "LUNCH_TARGET=twrp_${{ github.event.inputs.DEVICE_NAME }}-bp2a-eng" >> "$GITHUB_ENV"
           fi
           echo "BUILD_PARTITION=${{ github.event.inputs.BUILD_PARTITION }}" >> "$GITHUB_ENV"
         fi
@@ -114,7 +114,7 @@ jobs:
         export CCACHE_EXEC=$(command -v ccache)
         export CCACHE_MAXSIZE=5G
         export USE_CCACHE=1
-        lunch twrp_${{ env.LUNCH_TARGET }}
+        lunch ${{ env.LUNCH_TARGET }}
         (while true; do echo `date +%T` "Building recovery..."; free -h; sleep 60; done) &
         TIP_PID=$!
         m ${{ env.BUILD_PARTITION }}image

@@ -94,8 +94,14 @@ jobs:
         repo init -u "$TWRP_MANIFEST_URL" -b "$TWRP_MANIFEST_BRANCH" --depth=1
         (while true; do echo "Syncing source..."; sleep 60; done) &
         TIP_PID=$!
-        repo sync -c --force-sync --no-clone-bundle --no-tags -j$(nproc)
-        kill $TIP_PID && exit 0
+        for i in 1 2 3 4 5 6; do
+          echo "=== repo sync attempt $i ==="
+          repo sync -c --force-sync --no-clone-bundle --no-tags -j$(nproc) && SYNC_OK=1 && break
+          echo "sync attempt $i failed, retrying in 30s..."
+          sleep 30
+        done
+        kill $TIP_PID || true
+        [ "$SYNC_OK" = "1" ] || { echo "repo sync failed after 6 attempts"; exit 1; }
 
     - name: Setup device
       run: |

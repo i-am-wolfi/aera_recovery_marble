@@ -124,6 +124,9 @@ jobs:
         done
         kill $TIP_PID || true
         [ "$SYNC_OK" = "1" ] || { echo "repo sync failed after 6 attempts"; exit 1; }
+        echo "Freeing .repo git objects (not needed for build)..."
+        rm -rf .repo
+        df -h
 
     - name: Setup device
       run: |
@@ -145,7 +148,7 @@ jobs:
         lunch ${{ env.LUNCH_TARGET }}
         (while true; do echo `date +%T` "Building recovery..."; free -h; df -h / | tail -n 1; sleep 60; done) &
         TIP_PID=$!
-        m -j3 ${{ env.BUILD_PARTITION }}image
+        m -j2 ${{ env.BUILD_PARTITION }}image
         mv out/target/product/${{ env.DEVICE_NAME }}/${{ env.BUILD_PARTITION }}.img out/target/product/${{ env.DEVICE_NAME }}/AERA-marble-${{ env.BUILD_DATE }}.img
         kill $TIP_PID && exit 0
 

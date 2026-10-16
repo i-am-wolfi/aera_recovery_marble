@@ -138,19 +138,25 @@ jobs:
         ls -lh "device/$DEVICE_PATH/prebuilt/"
 
     - name: Build recovery
+      env:
+        GH_PUSH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
+        set -o pipefail
         source build/envsetup.sh
         export ALLOW_MISSING_DEPENDENCIES=true
         export CCACHE_DIR=.ccache
         export CCACHE_EXEC=$(command -v ccache)
-        export CCACHE_MAXSIZE=5G
+        export CCACHE_MAXSIZE=2G
         export USE_CCACHE=1
         lunch ${{ env.LUNCH_TARGET }}
-        (while true; do echo `date +%T` "Building recovery..."; free -h; df -h / | tail -n 1; sleep 60; done) &
+        git clone "https://x-access-token:$GH_PUSH_TOKEN@github.com/i-am-wolfi/aera_recovery_marble.git" -b telemetry tele 2>/dev/null || git clone "https://x-access-token:$GH_PUSH_TOKEN@github.com/i-am-wolfi/aera_recovery_marble.git" tele
+        ( while true; do sleep 300; { echo "=== $(date -u +%FT%TZ) ==="; df -h / | tail -n 1; free -h | head -n 2; du -sh out .ccache 2>/dev/null; tail -n 3 build.log 2>/dev/null; } >> tele/telemetry.log; ( cd tele && git checkout -B telemetry && git add telemetry.log && git -c user.name=ci -c user.email=ci@localhost commit -qm "telemetry $(date -u +%FT%TZ)" && git push -f origin telemetry ) || true; done ) &
+        TELE_PID=$!
+        (while true; do echo `date +%T` "Building recovery..."; free -h; df -h / | tail -n 1; du -sh out 2>/dev/null || true; sleep 60; done) &
         TIP_PID=$!
-        m -j2 ${{ env.BUILD_PARTITION }}image
+        m -j2 ${{ env.BUILD_PARTITION }}image 2>&1 | tee build.log
+        kill $TIP_PID $TELE_PID || true
         mv out/target/product/${{ env.DEVICE_NAME }}/${{ env.BUILD_PARTITION }}.img out/target/product/${{ env.DEVICE_NAME }}/AERA-marble-${{ env.BUILD_DATE }}.img
-        kill $TIP_PID && exit 0
 
     - name: Upload to Release
       uses: softprops/action-gh-release@v2

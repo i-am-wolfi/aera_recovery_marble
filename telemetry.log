@@ -16,3 +16,12 @@ Mem:            15Gi        15Gi       268Mi       7.1Mi       759Mi       548Mi
 [ 97% 129/132] compile out/host/linux-x86/bin/go/soong_build/obj/soong_build.a
 [ 98% 130/132] link out/host/linux-x86/bin/go/soong_build/obj/soong_build
 [ 99% 131/132] cp out/host/linux-x86/bin/soong_build
+=== 2026-10-17T00:55:21Z ===
+/dev/root       145G  143G  1.7G  99% /
+               total        used        free      shared  buff/cache   available
+Mem:            15Gi        15Gi       277Mi       9.9Mi       866Mi       592Mi
+1.2G	out
+2.2M	.ccache
+[ 97% 129/132] compile out/host/linux-x86/bin/go/soong_build/obj/soong_build.a
+[ 98% 130/132] link out/host/linux-x86/bin/go/soong_build/obj/soong_build
+[ 99% 131/132] cp out/host/linux-x86/bin/soong_build

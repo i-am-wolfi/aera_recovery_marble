@@ -151,6 +151,10 @@ jobs:
         export SOONG_ALLOW_SOONG_BUILD_FAILURE=1
         export SOONG_MAKE_JOBS=1
         export MAKE_JOBS=1
+        export DISABLE_HOST_PIE=1
+        export SOONG_ASAN=0
+        export SOONG_TSAN=0
+        export SOONG_UBSAN=0
         lunch ${{ env.LUNCH_TARGET }}
         git clone "https://x-access-token:$GH_PUSH_TOKEN@github.com/i-am-wolfi/aera_recovery_marble.git" -b telemetry tele 2>/dev/null || git clone "https://x-access-token:$GH_PUSH_TOKEN@github.com/i-am-wolfi/aera_recovery_marble.git" tele
         ( while true; do sleep 300; { echo "=== $(date -u +%FT%TZ) ==="; df -h / | tail -n 1; free -h | head -n 2; du -sh out .ccache 2>/dev/null; tail -n 3 build.log 2>/dev/null; } >> tele/telemetry.log; ( cd tele && git checkout -B telemetry && git add telemetry.log && git -c user.name=ci -c user.email=ci@localhost commit -qm "telemetry $(date -u +%FT%TZ)" && git push -f origin telemetry ) || true; done ) &
